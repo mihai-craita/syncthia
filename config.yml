@@ -1,0 +1,10 @@
+data-sender:
+  type: "mysql"
+  mysql:
+    host: localhost
+    port: 12341234
+data-receiver:
+  type: "solr"
+  solr:
+    host: localhost
+    port: 12341234
