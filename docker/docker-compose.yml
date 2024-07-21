@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   mysql:
     image: mysql:5.7
@@ -13,16 +12,68 @@ services:
     ports:
       - "3306:3306"
 
-  mongodb:
-    image: mongo
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-    volumes:
-      - mongo-data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d
+  mongo1:
+    image: mongo:latest
+    container_name: mongo1
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017", "--noauth"]
     ports:
-      - "27017:27017"
+      - 27017:27017
+    volumes:
+      - mongo1_data:/data/db
+      # - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - mongo-network
+    environment:
+      MONGO_INITDB_DATABASE: testdb
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: root
+    #   MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo2:
+    image: mongo:latest
+    container_name: mongo2
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27018", "--noauth"]
+    ports:
+      - 27018:27018
+    volumes:
+      - mongo2_data:/data/db
+    networks:
+      - mongo-network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo3:
+    image: mongo:latest
+    container_name: mongo3
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27019", "--noauth"]
+    ports:
+      - 27019:27019
+    volumes:
+      - mongo3_data:/data/db
+      # - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - mongo-network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo_setup:
+    image: mongo:latest
+    container_name: mongo_setup
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    volumes:
+      - ./mongo-init/init-replica.sh:/init-replica.sh
+    entrypoint: ["/bin/bash", "/init-replica.sh"]
+    networks:
+      - mongo-network
 
   solr:
     image: solr:8
@@ -37,5 +88,11 @@ services:
 
 volumes:
   mysql-data:
-  mongo-data:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
   solr-data:
+
+networks:
+  mongo-network:
+    driver: bridge
